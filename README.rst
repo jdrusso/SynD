@@ -14,6 +14,15 @@ Features
 
 * TODO
 
+
+Todo
+----
+
+* Add MD-specific Markov model, that backmaps MDTraj structures
+* Make Markov propagation more efficient
+* (?) Implement Markov models using deeptime
+* Add progress bar to trajectory generation, using Rich
+
 Credits
 -------
 

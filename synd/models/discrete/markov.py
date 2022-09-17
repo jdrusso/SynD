@@ -35,7 +35,6 @@ class MarkovGenerator(DiscreteGenerator):
 
         trajectories[:, 0] = initial_distribution
 
-        # TODO: Make this more efficient
         for i in range(1, n_steps):
 
             previous_states = trajectories[:, i-1]

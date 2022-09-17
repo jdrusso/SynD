@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from synd.core import load_model
 from synd import cli
+import synd.hosted
 from synd.models.discrete.markov import MarkovGenerator
 from examples.data import simple_model
 import numpy as np
@@ -27,6 +28,18 @@ class TestSynd(unittest.TestCase):
 
     def tearDown(self):
         """Tear down test fixtures, if any."""
+
+    def test_uploading_hosted_model(self):
+
+        access_key = os.environ.get('MINIO_ACCESSKEY')
+        secret_key = os.environ.get('MINIO_SECRETKEY')
+
+        test_object_name = 'test_synmd_model'
+
+        client = synd.hosted.make_minio_client(access_key=access_key, secret_key=secret_key)
+        synd.hosted.upload_model(self.synmd_model, test_object_name, client)
+
+        assert client.stat_object(bucket_name=synd.hosted.MODEL_BUCKET, object_name=test_object_name) is not None
 
     def test_saving_loading_markov_generator(self):
         """Test saving and loading a Markov generator."""

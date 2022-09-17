@@ -1,6 +1,7 @@
 from abc import ABC
 import logging
 from rich.logging import RichHandler
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -16,3 +17,8 @@ class BaseSynDModel(ABC):
     def __init__(self):
 
         self.logger = logger
+
+    def save(self, outfile: str):
+
+        with open(outfile, 'wb') as of:
+            pickle.dump(self, of)

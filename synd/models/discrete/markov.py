@@ -1,10 +1,10 @@
-from synd.models.discrete.discrete import DiscreteModel
+from synd.models.discrete.discrete import DiscreteGenerator
 import numpy as np
 import numpy.typing as npt
 from typing import Callable
 
 
-class MarkovModel(DiscreteModel):
+class MarkovGenerator(DiscreteGenerator):
 
     def __init__(self, transition_matrix: npt.ArrayLike, backmapper: Callable[[int], npt.ArrayLike], seed: int = None):
 

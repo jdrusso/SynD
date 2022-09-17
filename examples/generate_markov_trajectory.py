@@ -1,4 +1,4 @@
-from synd.models.discrete.markov import MarkovModel
+from synd.models.discrete.markov import MarkovGenerator
 import numpy as np
 
 transition_matrix = np.array([
@@ -19,7 +19,7 @@ n_steps = 10
 
 if __name__ == '__main__':
 
-    synmd_model = MarkovModel(
+    synmd_model = MarkovGenerator(
         transition_matrix=transition_matrix,
         backmapper=lambda x: state_definitions[x]
     )

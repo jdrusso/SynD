@@ -3,7 +3,7 @@ from abc import abstractmethod
 import numpy.typing as npt
 
 
-class DiscreteModel(BaseSynDModel):
+class DiscreteGenerator(BaseSynDModel):
 
     def __init__(self):
 

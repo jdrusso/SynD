@@ -18,6 +18,10 @@ class BaseSynDModel(ABC):
 
         self.logger = logger
 
+    def serialize(self):
+
+        return pickle.dumps(self)
+
     def save(self, outfile: str):
 
         with open(outfile, 'wb') as of:

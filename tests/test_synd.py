@@ -11,6 +11,7 @@ from synd.core import load_model
 from synd import cli
 from synd.models.discrete.markov import MarkovGenerator
 from examples.data import simple_model
+import numpy as np
 
 
 class TestSynd(unittest.TestCase):
@@ -27,8 +28,8 @@ class TestSynd(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_saving_markov_generator(self):
-        """Test something."""
+    def test_saving_loading_markov_generator(self):
+        """Test saving and loading a Markov generator."""
 
         self.synmd_model.save("simple_synmd_model.dat")
 
@@ -37,6 +38,20 @@ class TestSynd(unittest.TestCase):
         assert isinstance(loaded_model, MarkovGenerator)
 
         os.remove("simple_synmd_model.dat")
+
+    def test_markov_trajectory_generation(self):
+        """Test generating a short trajectory from a Markov generator."""
+
+        n_steps = 10
+
+        trajectory = self.synmd_model.generate_trajectory(
+            initial_distribution=simple_model.initial_distribution,
+            n_steps=n_steps
+        )
+
+        assert isinstance(trajectory, np.ndarray)
+        assert trajectory.shape[0] == simple_model.initial_distribution.shape[0]
+        assert trajectory.shape[1] == n_steps
 
     def test_command_line_interface(self):
         """Test the CLI."""

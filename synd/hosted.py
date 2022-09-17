@@ -11,7 +11,7 @@ def make_minio_client(access_key: str, secret_key: str, model_host: str = MODEL_
     return client
 
 
-def load_hosted_model(identifier: str, client: minio.Minio, bucket: str = MODEL_BUCKET) -> BaseSynDModel:
+def download_model(identifier: str, client: minio.Minio, bucket: str = MODEL_BUCKET) -> BaseSynDModel:
 
     model = client.get_object(bucket, identifier)
 

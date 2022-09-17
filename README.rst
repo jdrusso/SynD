@@ -3,7 +3,7 @@ SynD
 ====
 
 
-Library for creating and using synthetic dynamic models.
+Library for creating and using synthetic dynamics generators.
 
 
 * Free software: MIT license
@@ -12,7 +12,18 @@ Library for creating and using synthetic dynamic models.
 Model Hosting
 -------------
 Serialized models can be stored/retrieved from an S3 object store using the
-functionality in `synd.hosted`_ module.
+functionality in ``synd.hosted`` module.
+
+Usage
+-----
+Some example scripts are provided in ``examples/``.
+
+Sample Scripts
+==============
+* ``examples/data/simple_model.py`` parameterizes a SynD generator of a simple 3-state Markov system.
+* ``generate_markov_trajectory.py`` Creates a ``MarkovGenerator``, and generates some trajectories.
+* ``create_model.py`` Creates a ``MarkovGenerator`` from ``simple_model.py``, and serializes it.
+* ``use_saved_model.py`` Loads the ``MarkovGenerator`` created by ``create_model.py`` and generates some short trajectories.
 
 
 Features

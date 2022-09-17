@@ -26,20 +26,43 @@ class TestSynd(unittest.TestCase):
             backmapper=simple_model.backmapper
         )
 
+        self.access_key = os.environ.get('MINIO_ACCESSKEY')
+        self.secret_key = os.environ.get('MINIO_SECRETKEY')
+
+        self.test_bucket = synd.hosted.MODEL_BUCKET
+
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
     def test_uploading_hosted_model(self):
 
-        access_key = os.environ.get('MINIO_ACCESSKEY')
-        secret_key = os.environ.get('MINIO_SECRETKEY')
+        test_object_name = 'upload_test_model'
 
-        test_object_name = 'test_synmd_model'
+        client = synd.hosted.make_minio_client(access_key=self.access_key, secret_key=self.secret_key)
 
-        client = synd.hosted.make_minio_client(access_key=access_key, secret_key=secret_key)
-        synd.hosted.upload_model(self.synmd_model, test_object_name, client)
+        synd.hosted.upload_model(model=self.synmd_model,
+                                 identifier=test_object_name,
+                                 client=client,
+                                 bucket=self.test_bucket
+                                 )
 
-        assert client.stat_object(bucket_name=synd.hosted.MODEL_BUCKET, object_name=test_object_name) is not None
+        assert client.stat_object(bucket_name=self.test_bucket, object_name=test_object_name) is not None, \
+            "Model upload failed"
+
+        client.remove_object(bucket_name=synd.hosted.MODEL_BUCKET, object_name=test_object_name)
+
+    def test_downloading_hosted_model(self):
+
+        test_object_name = 'download_test_model'
+
+        client = synd.hosted.make_minio_client(access_key=self.access_key, secret_key=self.secret_key)
+
+        assert client.stat_object(bucket_name=self.test_bucket, object_name=test_object_name) is not None, \
+            "Test model doesn't exist!"
+
+        model = synd.hosted.download_model(test_object_name, client, bucket=self.test_bucket)
+
+        assert model is not None, "Model download failed"
 
     def test_saving_loading_markov_generator(self):
         """Test saving and loading a Markov generator."""

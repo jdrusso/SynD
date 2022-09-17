@@ -1,0 +1,7 @@
+name: synd
+dependencies:
+    - python=3.9
+    - numpy
+    - click
+    - setuptools
+    - rich

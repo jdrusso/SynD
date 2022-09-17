@@ -9,10 +9,17 @@ Library for creating and using synthetic dynamic models.
 * Free software: MIT license
 
 
+Model Hosting
+-------------
+Serialized models can be stored/retrieved from an S3 object store using the
+functionality in `synd.hosted`_ module.
+
+
 Features
 --------
 
-* TODO
+* Trajectory generation from synthetic Markov models
+* Model serialization/storage/retrieval via S3
 
 
 Todo

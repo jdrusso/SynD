@@ -89,6 +89,7 @@ class TestSynd(unittest.TestCase):
         assert trajectory.shape[0] == simple_model.initial_distribution.shape[0]
         assert trajectory.shape[1] == n_steps
 
+    @unittest.skip
     def test_command_line_interface(self):
         """Test the CLI."""
         runner = CliRunner()

@@ -14,9 +14,13 @@ Model Hosting
 Serialized models can be stored/retrieved from an S3 object store using the
 functionality in ``synd.hosted`` module.
 
+To use hosted models, set the ``MINIO_ACCESSKEY`` and ``MINIO_SECRETKEY`` environment variables, or create an ``.env``
+from ``.env-template``.
+
 Usage
 -----
 Some example scripts are provided in ``examples/``.
+
 
 Sample Scripts
 ==============

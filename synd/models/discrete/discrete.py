@@ -10,7 +10,7 @@ class DiscreteGenerator(BaseSynDModel):
         super().__init__()
 
     @abstractmethod
-    def backmap(self, discrete_index):
+    def backmap(self, discrete_index: int):
         pass
 
     @abstractmethod

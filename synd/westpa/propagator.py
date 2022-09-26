@@ -1,9 +1,9 @@
 from westpa.core.propagators import WESTPropagator
-from numpy.random import Generator, PCG64
 import numpy as np
 import scipy.sparse as sparse
 import westpa
 import pickle
+from synd.models.discrete.markov import MarkovGenerator
 
 
 def get_segment_parent_index(segment):
@@ -62,114 +62,115 @@ def copy_segment_data():
 
 
 class SynMDPropagator(WESTPropagator):
-    def __init__(self, rc=None, transition_matrix=None, n_steps: int = None, pcoord_map: dict = None):
-        # TODO: The goal of these arguments is to take, optionally, parameters provided through westpa.rc or
-        #       provided individually as arguments.
-        #       I don't think this is a particularly clean way of doing this, and I should give some more thought
-        #       to how this handles edge cases. (What if arguments are specified in both? Which one gets priority?)
+    def __init__(self, rc=None):
+        """
+        A propagator leveraging the SynD library for propagation
+
+        The keys loaded from WESTPA configuration are:
+            - west.system.system_options.pcoord_len: The number of steps to propagate
+            - west.propagation.parameters.pcoord_map: The path to either a pickled dictionary, mapping discrete states
+                to progress coordinates, or to an arbitrary pickled callable that takes a discrete state and returns
+                a progress coordinate.
+            - west.propagation.parameters.transition_matrix: The path to a transition matrix to construct the SynD
+                propagator from.
+
+        :param rc: westpa.rc containing west.propagation.parameters.transition_matrix/pcoord_map
+
+        TODO
+        ----
+        Instead of creating the synD model from a transition matrix and states, just load in a SynD model.
+        Then users can provide arbitrary models, discrete or not.
+        """
 
         super(SynMDPropagator, self).__init__(rc)
 
         rc_parameters = rc.config.get(['west', 'propagation', 'parameters'])
 
-        if n_steps is None:
-            # TODO: Would be nice to decouple this from pcoord len, so you can run dynamics at a higher resolution
-            #  but only save every N
-            n_steps = rc.config.get(['west', 'system', 'system_options', 'pcoord_len'])
-            print(f"SynD propagator inferring {n_steps} steps per iteration "
-                  f"from west.system.system_options.pcoord_len")
 
-        if transition_matrix is None:
-            transition_matrix = rc_parameters['transition_matrix']
+        pcoord_map_path = rc_parameters['pcoord_map']
+        with open(pcoord_map_path, 'rb') as inf:
+            pcoord_map = pickle.load(inf)
+        if type(pcoord_map) is dict:
+            backmapper = pcoord_map.get
+        else:
+            backmapper = pcoord_map
 
-        # Allow either a string, which will be a path, or a dict, which is the mapping itself
-        if pcoord_map is None:
-            pcoord_map_path = rc_parameters['pcoord_map']
-
-            with open(pcoord_map_path, 'rb') as inf:
-                pcoord_map = pickle.load(inf)
-
+        # Our dynamics are propagated in the discrete space, which is recorded only in auxdata. After completing an
+        #   iteration, we write the final discrete indices to the initial point auxdata of the next segments.
+        # All discrete information is stored exclusively in auxdata, so that as far as the WE is concerned, it's all
+        #   continuous.
         sim_manager = rc.get_sim_manager()
-
         sim_manager.register_callback(
             sim_manager.finalize_iteration, copy_segment_data, 1
         )
+
+        # TODO: Would be nice to decouple this from pcoord len, so you can run dynamics at a higher resolution
+        #  but only save every N
+        n_steps = rc.config.get(['west', 'system', 'system_options', 'pcoord_len'])
+        print(f"SynD propagator inferring {n_steps} steps per iteration from west.system.system_options.pcoord_len")
 
         # AKA the number of steps to take
         self.coord_len = n_steps
         self.coord_dtype = int
 
+        transition_matrix = rc_parameters['transition_matrix']
         try:
             self.transition_matrix = sparse.load_npz(transition_matrix)
         except ValueError:  # .npz file doesn't contain a sparse matrix
             with np.load(transition_matrix) as npzfile:
                 self.transition_matrix = npzfile[npzfile.files[0]]
 
-        # We explicitly make the matrix dense. This isn't ideal, in general, but appears to be necessary to use the
-        #   rows as a probability distribution to rng.choice. See the note in propagate()
+        # We explicitly make the matrix dense, necessary for self.rng.choice used in the SynD propagation
         if sparse.issparse(self.transition_matrix):
             self.transition_matrix = self.transition_matrix.toarray()
 
-        self.cumulative_probabilities = np.cumsum(self.transition_matrix, axis=1)
-
-        self.rng = Generator(PCG64())
-
-        self.pcoord_map = pcoord_map
+        self.synd_model = MarkovGenerator(
+            transition_matrix=self.transition_matrix,
+            backmapper=backmapper,
+            seed=None
+        )
 
     def get_pcoord(self, state):
         """Get the progress coordinate of the given basis or initial state."""
 
         state_index = int(state.auxref)
-        state.pcoord = self.pcoord_map[state_index]
+        state.pcoord = self.synd_model.backmap(state_index)
 
     def gen_istate(self, basis_state, initial_state):
 
         basis_state_index = int(basis_state.auxref)
-        initial_state.pcoord = self.pcoord_map[basis_state_index]
+        initial_state.pcoord = self.synd_model.backmap(basis_state_index)
 
     def propagate(self, segments):
 
         # Populate the segment initial positions
         n_segs = len(segments)
 
-        coords = np.empty((n_segs, self.coord_len), dtype=self.coord_dtype)
+        initial_points = np.empty(n_segs, dtype=self.coord_dtype)
 
         for iseg, segment in enumerate(segments):
 
             try:
-                coords[iseg, 0] = segment.data["parent_final_state_index"]
+                initial_points[iseg] = segment.data["parent_final_state_index"]
             except KeyError:
-                # If we're in the first iteration, no states have been written to auxdata yet.
-                # If that's the case, we need to get this state index directly from the bstate that it
-                #       was generated from.
+                # If we're in the first iteration, no states have been written to auxdata yet, so we need to get this
+                #   state index directly from the bstate definition that it was generated from.
+                assert segment.parent_id < 0, "Parent is not a bstate, but also doesn't have state indices written for SynD"
 
-                parent_id = segment.parent_id
-                assert parent_id < 0, "Parent is not a bstate, but also doesn't have state indices written for SynD"
+                bstate = westpa.rc.get_sim_manager().current_iter_bstates[segment.parent_id]
+                initial_points[iseg] = bstate.auxref
 
-                bstates = westpa.rc.get_sim_manager().current_iter_bstates
-                bstate = bstates[parent_id]
-                coords[iseg, 0] = bstate.auxref
-
-                # TODO: Can do this in one shot using T^{1..N} (not sure if more efficient)
-        #       Precompute T^N (for N in 1..n_steps) at the beginning when the propagator is created, then reuse
-        probabilities = self.rng.random(size=(n_segs, self.coord_len - 1))
-        for istep in range(1, self.coord_len):
-            current_states = coords[:, istep - 1]
-
-            next_states = np.argmin(
-                self.cumulative_probabilities[current_states].T
-                < probabilities[:, istep - 1],
-                axis=0,
-            )
-
-            coords[:, istep] = next_states
+        new_trajectories = self.synd_model.generate_trajectory(
+            initial_distribution=initial_points,
+            n_steps=self.coord_len
+        )
 
         for iseg, segment in enumerate(segments):
-            segment.data["state_indices"] = coords[iseg, :]
+            segment.data["state_indices"] = new_trajectories[iseg, :]
 
-            segment.pcoord = np.array(
-                [self.pcoord_map[x] for x in segment.data["state_indices"]]
-            ).reshape(self.coord_len, -1)
+            segment.pcoord = np.array([
+                self.synd_model.backmap(x) for x in segment.data["state_indices"]
+            ]).reshape(self.coord_len, -1)
 
             segment.status = segment.SEG_STATUS_COMPLETE
 

@@ -1,7 +1,7 @@
 from synd.models.discrete.discrete import DiscreteGenerator
 import numpy as np
 import numpy.typing as npt
-from typing import Callable
+from typing import Callable, Union
 from scipy import sparse
 
 
@@ -18,6 +18,7 @@ class MarkovGenerator(DiscreteGenerator):
 
         self.n_states = self.transition_matrix.shape[0]
         self._backmapper = backmapper
+        self._vectorized_backmapper = np.vectorize(backmapper)
 
         self.rng = np.random.default_rng(seed=seed)
 
@@ -25,9 +26,9 @@ class MarkovGenerator(DiscreteGenerator):
 
         self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
 
-    def backmap(self, discrete_index: int) -> npt.ArrayLike:
+    def backmap(self, discrete_index: Union[int, npt.ArrayLike]) -> npt.ArrayLike:
 
-        return self._backmapper(discrete_index)
+        return self._vectorized_backmapper(discrete_index)
 
     def generate_trajectory(self, initial_states: npt.ArrayLike, n_steps: int) -> npt.ArrayLike:
 

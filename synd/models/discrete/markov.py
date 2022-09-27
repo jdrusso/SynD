@@ -3,7 +3,6 @@ import numpy as np
 import numpy.typing as npt
 from typing import Callable
 from scipy import sparse
-import pickle
 
 
 class MarkovGenerator(DiscreteGenerator):
@@ -30,19 +29,19 @@ class MarkovGenerator(DiscreteGenerator):
 
         return self._backmapper(discrete_index)
 
-    def generate_trajectory(self, initial_distribution: npt.ArrayLike, n_steps: int) -> npt.ArrayLike:
+    def generate_trajectory(self, initial_states: npt.ArrayLike, n_steps: int) -> npt.ArrayLike:
 
-        self.logger.debug(f"Propagating {initial_distribution} for {n_steps} steps...")
+        self.logger.debug(f"Propagating {initial_states} for {n_steps} steps...")
 
         trajectories = np.full(
-            shape=(initial_distribution.shape[0], n_steps),
+            shape=(initial_states.shape[0], n_steps),
             dtype=int,
             fill_value=-1
         )
 
-        n_trajectories = initial_distribution.shape[0]
+        n_trajectories = initial_states.shape[0]
 
-        trajectories[:, 0] = initial_distribution
+        trajectories[:, 0] = initial_states
 
         probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))
 

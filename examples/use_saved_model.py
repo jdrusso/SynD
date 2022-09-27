@@ -8,7 +8,7 @@ if __name__ == '__main__':
     synmd_model = load_model("simple_synmd_model.dat")
 
     trajectory = synmd_model.generate_trajectory(
-        initial_distribution=initial_distribution,
+        initial_states=initial_distribution,
         n_steps=n_steps
     )
 

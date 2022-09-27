@@ -81,7 +81,7 @@ class TestSynd(unittest.TestCase):
         n_steps = 10
 
         trajectory = self.synmd_model.generate_trajectory(
-            initial_distribution=simple_model.initial_distribution,
+            initial_states=simple_model.initial_distribution,
             n_steps=n_steps
         )
 

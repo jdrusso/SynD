@@ -10,7 +10,7 @@ if __name__ == '__main__':
     )
 
     trajectory = synmd_model.generate_trajectory(
-        initial_distribution=initial_distribution,
+        initial_states=initial_distribution,
         n_steps=n_steps
     )
 

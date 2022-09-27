@@ -167,7 +167,7 @@ class SynMDPropagator(WESTPropagator):
                 initial_points[iseg] = bstate.auxref
 
         new_trajectories = self.synd_model.generate_trajectory(
-            initial_distribution=initial_points,
+            initial_states=initial_points,
             n_steps=self.coord_len
         )
 

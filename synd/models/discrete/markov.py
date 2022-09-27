@@ -26,34 +26,10 @@ class MarkovGenerator(DiscreteGenerator):
         self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
 
     def backmap(self, discrete_index: int) -> npt.ArrayLike:
-        """
-        Returns the full-coordinate representation of a discrete state.
-
-        :param discrete_index: Discrete state index
-        :return: Full-coordinate representation.
-
-        TODO
-        ----
-        Accept a trajectory as an argument, and broadcast over it.
-        """
 
         return self._backmapper(discrete_index)
 
     def generate_trajectory(self, initial_states: npt.ArrayLike, n_steps: int) -> npt.ArrayLike:
-        """
-        Generates trajectories of n_steps, starting from the discrete states in initial_states
-
-        :param initial_states: Initial discrete states of each trajectory
-        :param n_steps: Final trajectory length, after propagation (includes initial point)
-        :return: Propagated trajectories
-
-        TODO
-        ----
-        Right now, this computes all the random numbers up front.
-        For very long trajectories, this requires generating a huge number of random numbers.
-        Random number generation should be chunked to deal with this.
-        I could fix chunk size, and limit the number of steps
-        """
 
         self.logger.debug(f"Propagating {initial_states} for {n_steps} steps...")
 

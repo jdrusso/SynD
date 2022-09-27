@@ -2,6 +2,8 @@ from synd.models.discrete.discrete import DiscreteGenerator
 import numpy as np
 import numpy.typing as npt
 from typing import Callable
+from scipy import sparse
+import pickle
 
 
 class MarkovGenerator(DiscreteGenerator):
@@ -9,7 +11,11 @@ class MarkovGenerator(DiscreteGenerator):
     def __init__(self, transition_matrix: npt.ArrayLike, backmapper: Callable[[int], npt.ArrayLike], seed: int = None):
 
         super().__init__()
+
+        if sparse.issparse(transition_matrix):
+            transition_matrix = transition_matrix.toarray()
         self.transition_matrix = transition_matrix
+
         self.n_states = self.transition_matrix.shape[0]
         self._backmapper = backmapper
 
@@ -55,3 +61,22 @@ class MarkovGenerator(DiscreteGenerator):
         assert transition_matrix.ndim == 2, "Transition matrix is not 2-dimensional"
 
         assert np.isclose(transition_matrix.sum(axis=1), 1.0), "Transition matrix is not row-normalized"
+
+    def __setstate__(self, state):
+        """
+        Make the transition matrix dense when unpickling
+        """
+
+        if sparse.issparse(state['transition_matrix']):
+            state['transition_matrix'] = state['transition_matrix'].toarray()
+
+        self.__dict__ = state
+
+    def __getstate__(self):
+        """
+        When pickling, make the transition matrix sparse
+        """
+
+        self.__dict__['transition_matrix'] = sparse.csr_matrix(self.__dict__['transition_matrix'])
+
+        return self.__dict__

@@ -3,6 +3,8 @@ import numpy as np
 import scipy.sparse as sparse
 import westpa
 import pickle
+
+import synd.core
 from synd.models.discrete.markov import MarkovGenerator
 
 
@@ -68,11 +70,14 @@ class SynMDPropagator(WESTPropagator):
 
         The keys loaded from WESTPA configuration are:
             - west.system.system_options.pcoord_len: The number of steps to propagate
+            EITHER
             - west.propagation.parameters.pcoord_map: The path to either a pickled dictionary, mapping discrete states
                 to progress coordinates, or to an arbitrary pickled callable that takes a discrete state and returns
                 a progress coordinate.
             - west.propagation.parameters.transition_matrix: The path to a transition matrix to construct the SynD
                 propagator from.
+            OR
+            - west.propagation.parameters.synd_model: The path to a saved SynD model.
 
         :param rc: westpa.rc containing west.propagation.parameters.transition_matrix/pcoord_map
 
@@ -80,20 +85,38 @@ class SynMDPropagator(WESTPropagator):
         ----
         Instead of creating the synD model from a transition matrix and states, just load in a SynD model.
         Then users can provide arbitrary models, discrete or not.
+        However, may need to make some changes to generalize the latent space representation in the auxdata (won't be
+            an integer any more).
         """
 
         super(SynMDPropagator, self).__init__(rc)
 
         rc_parameters = rc.config.get(['west', 'propagation', 'parameters'])
 
-
-        pcoord_map_path = rc_parameters['pcoord_map']
-        with open(pcoord_map_path, 'rb') as inf:
-            pcoord_map = pickle.load(inf)
-        if type(pcoord_map) is dict:
-            backmapper = pcoord_map.get
+        if 'synd_model' in rc_parameters.keys():
+            model_path = rc_parameters['synd_model']
+            self.synd_model = synd.core.load_model(model_path)
         else:
-            backmapper = pcoord_map
+            pcoord_map_path = rc_parameters['pcoord_map']
+            with open(pcoord_map_path, 'rb') as inf:
+                pcoord_map = pickle.load(inf)
+            if type(pcoord_map) is dict:
+                backmapper = pcoord_map.get
+            else:
+                backmapper = pcoord_map
+
+            transition_matrix = rc_parameters['transition_matrix']
+            try:
+                self.transition_matrix = sparse.load_npz(transition_matrix)
+            except ValueError:  # .npz file doesn't contain a sparse matrix
+                with np.load(transition_matrix) as npzfile:
+                    self.transition_matrix = npzfile[npzfile.files[0]]
+
+            self.synd_model = MarkovGenerator(
+                transition_matrix=self.transition_matrix,
+                backmapper=backmapper,
+                seed=None
+            )
 
         # Our dynamics are propagated in the discrete space, which is recorded only in auxdata. After completing an
         #   iteration, we write the final discrete indices to the initial point auxdata of the next segments.
@@ -112,23 +135,6 @@ class SynMDPropagator(WESTPropagator):
         # AKA the number of steps to take
         self.coord_len = n_steps
         self.coord_dtype = int
-
-        transition_matrix = rc_parameters['transition_matrix']
-        try:
-            self.transition_matrix = sparse.load_npz(transition_matrix)
-        except ValueError:  # .npz file doesn't contain a sparse matrix
-            with np.load(transition_matrix) as npzfile:
-                self.transition_matrix = npzfile[npzfile.files[0]]
-
-        # We explicitly make the matrix dense, necessary for self.rng.choice used in the SynD propagation
-        if sparse.issparse(self.transition_matrix):
-            self.transition_matrix = self.transition_matrix.toarray()
-
-        self.synd_model = MarkovGenerator(
-            transition_matrix=self.transition_matrix,
-            backmapper=backmapper,
-            seed=None
-        )
 
     def get_pcoord(self, state):
         """Get the progress coordinate of the given basis or initial state."""

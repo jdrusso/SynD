@@ -14,12 +14,15 @@ class MarkovGenerator(DiscreteGenerator):
 
         if sparse.issparse(transition_matrix):
             transition_matrix = transition_matrix.toarray()
+
         self.transition_matrix = transition_matrix
 
         self.n_states = self.transition_matrix.shape[0]
         self._backmapper = backmapper
 
         self.rng = np.random.default_rng(seed=seed)
+
+        self.cumulative_probabilities = np.cumsum(self.transition_matrix, axis=1)
 
         self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
 
@@ -41,17 +44,19 @@ class MarkovGenerator(DiscreteGenerator):
 
         trajectories[:, 0] = initial_distribution
 
-        for i in range(1, n_steps):
+        probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))
 
-            previous_states = trajectories[:, i-1]
-            probabilities = self.transition_matrix[previous_states]
+        for istep in range(1, n_steps):
 
-            for j in range(n_trajectories):
+            current_states = trajectories[:, istep - 1]
 
-                trajectories[j, i] = self.rng.choice(
-                    a=np.arange(self.n_states),
-                    p=probabilities[j]
-                )
+            next_states = np.argmin(
+                self.cumulative_probabilities[current_states].T
+                < probabilities[:, istep - 1],
+                axis=0,
+            )
+
+            trajectories[:, istep] = next_states
 
         return trajectories
 
@@ -70,6 +75,9 @@ class MarkovGenerator(DiscreteGenerator):
         if sparse.issparse(state['transition_matrix']):
             state['transition_matrix'] = state['transition_matrix'].toarray()
 
+        # Recalculate the cumulative probabilities
+        state['cumulative_probabilities'] = np.cumsum(state['transition_matrix'], axis=1)
+
         self.__dict__ = state
 
     def __getstate__(self):
@@ -77,6 +85,12 @@ class MarkovGenerator(DiscreteGenerator):
         When pickling, make the transition matrix sparse
         """
 
-        self.__dict__['transition_matrix'] = sparse.csr_matrix(self.__dict__['transition_matrix'])
+        sparse_dict = self.__dict__.copy()
 
-        return self.__dict__
+        # Store a sparse representation of this
+        sparse_dict['transition_matrix'] = sparse.csr_matrix(self.__dict__['transition_matrix'])
+
+        # Don't pickle this, because 1) it can be calculated and 2) it's large and not sparse
+        sparse_dict.pop('cumulative_probabilities')
+
+        return sparse_dict

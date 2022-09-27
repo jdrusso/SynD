@@ -6,3 +6,6 @@ dependencies:
     - setuptools
     - rich
     - minio
+    - pip
+    - pip:
+        - .

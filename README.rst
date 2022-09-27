@@ -9,6 +9,12 @@ Library for creating and using synthetic dynamics generators.
 * Free software: MIT license
 
 
+Installation
+------------
+
+SynD can be installed with
+``pip install SynD``
+
 Model Hosting
 -------------
 Serialized models can be stored/retrieved from an S3 object store using the

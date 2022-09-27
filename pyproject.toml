@@ -1,0 +1,27 @@
+[build-system]
+requires      = ["setuptools", "wheel"]
+
+[project]
+name = "SynD"
+version = "0.1.0"
+description = "Synthetic dynamics for trajectory generation"
+readme = "README.md"
+authors = [{ name = "John Russo", email = "russojd@ohsu.edu" }]
+license = { text = "BSD 3-Clause License" }
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["molecular dynamics", "markov"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "rich"
+]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+dev = ["black", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/jdrusso/SynD"

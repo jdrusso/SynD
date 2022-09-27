@@ -29,6 +29,7 @@ Sample Scripts
 * ``create_model.py`` Creates a ``MarkovGenerator`` from ``simple_model.py``, and serializes it.
 * ``use_saved_model.py`` Loads the ``MarkovGenerator`` created by ``create_model.py`` and generates some short trajectories.
 
+* ``examples/westpa`` Example of simulating Trp-cage unfolding, using WESTPA with a 10,500 state discrete Markov SynD propagator.
 
 Features
 --------

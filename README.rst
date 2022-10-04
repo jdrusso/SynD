@@ -5,6 +5,9 @@ SynD
 .. image:: https://mybinder.org/badge_logo.svg
  :target: https://mybinder.org/v2/gh/jdrusso/SynD/HEAD?labpath=examples%2Fsynd_demo.ipynb
  
+
+.. image:: https://github.com/jdrusso/synd/actions/workflows/build_docs.yml/badge.svg
+  :target: https://github.com/jdrusso/synd/actions/workflows/build_docs.yml
  
 Library for creating and using synthetic dynamics generators.
 

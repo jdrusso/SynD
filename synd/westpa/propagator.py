@@ -64,29 +64,36 @@ def copy_segment_data():
 
 
 class SynMDPropagator(WESTPropagator):
-    def __init__(self, rc=None):
+    """
+    A WESTPA propagator for SynD models.
+    """
+    def __init__(self, rc: westpa.rc = None):
         """
-        A propagator leveraging the SynD library for propagation
-
         The keys loaded from WESTPA configuration are:
-            - west.system.system_options.pcoord_len: The number of steps to propagate
-            EITHER
-            - west.propagation.parameters.pcoord_map: The path to either a pickled dictionary, mapping discrete states
-                to progress coordinates, or to an arbitrary pickled callable that takes a discrete state and returns
-                a progress coordinate.
-            - west.propagation.parameters.transition_matrix: The path to a transition matrix to construct the SynD
-                propagator from.
-            OR
-            - west.propagation.parameters.synd_model: The path to a saved SynD model.
 
-        :param rc: westpa.rc containing west.propagation.parameters.transition_matrix/pcoord_map
+        - :code:`west.system.system_options.pcoord_len`: The number of steps to propagate
+
+        EITHER
+
+        - :code:`west.propagation.parameters.pcoord_map`: The path to either a pickled dictionary, mapping discrete states to progress coordinates, or to an arbitrary pickled callable that takes a discrete state and returns a progress coordinate.
+
+        - :code:`west.propagation.parameters.transition_matrix`: The path to a transition matrix to construct the SynD propagator from.
+
+        OR
+
+        - :code:`west.propagation.parameters.synd_model`: The path to a saved SynD model.
+
+        Parameters
+        ----------
+        rc :
+            A :code:`westpa.rc` configuration object, containing :code:`west.propagation.parameters.transition_matrix`/:code:`pcoord_map`
 
         TODO
         ----
         Instead of creating the synD model from a transition matrix and states, just load in a SynD model.
         Then users can provide arbitrary models, discrete or not.
         However, may need to make some changes to generalize the latent space representation in the auxdata (won't be
-            an integer any more).
+        an integer any more).
         """
 
         super(SynMDPropagator, self).__init__(rc)

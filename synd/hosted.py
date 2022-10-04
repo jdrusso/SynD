@@ -1,3 +1,4 @@
+"""Store/retrieve SynD models from an S3 host."""
 import minio
 from synd.models.base import BaseSynDModel
 from io import BytesIO

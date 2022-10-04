@@ -1,3 +1,4 @@
+"""Abstract base SynD model class."""
 from abc import ABC
 import logging
 from rich.logging import RichHandler
@@ -13,16 +14,34 @@ logger.addHandler(rich_handler)
 
 
 class BaseSynDModel(ABC):
+    """
+    Abstract base SynD model.
+    """
 
     def __init__(self):
 
         self.logger = logger
 
     def serialize(self):
+        """
+        Get the serialized representation of the SynD model.
+
+        Returns
+        -------
+        Serialized representation of the model.
+        """
 
         return pickle.dumps(self)
 
     def save(self, outfile: str):
+        """
+        Saves a SynD model to a file on disk.
+
+        Parameters
+        ----------
+        outfile :
+            Name of the file to save the model to.
+        """
 
         with open(outfile, 'wb') as of:
             pickle.dump(self, of)

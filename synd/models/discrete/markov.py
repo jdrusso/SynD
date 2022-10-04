@@ -1,13 +1,27 @@
+from __future__ import annotations  # Sets PEP563, necessary for autodoc type aliases
 from synd.models.discrete.discrete import DiscreteGenerator
 import numpy as np
-import numpy.typing as npt
+from numpy.typing import ArrayLike
 from typing import Callable, Union
 from scipy import sparse
 
 
 class MarkovGenerator(DiscreteGenerator):
+    """
+    Generator using discrete Markov dynamics.
+    """
 
-    def __init__(self, transition_matrix: npt.ArrayLike, backmapper: Callable[[int], npt.ArrayLike], seed: int = None):
+    def __init__(self, transition_matrix: ArrayLike, backmapper: Callable[[int], ArrayLike], seed: int = None):
+        """
+        Parameters
+        ----------
+        transition_matrix
+            A valid discrete transition matrix
+        backmapper
+            Callable mapping a discrete state index to a full-coordinate representation
+        seed
+            The seed for random number generator
+        """
 
         super().__init__()
 
@@ -26,11 +40,36 @@ class MarkovGenerator(DiscreteGenerator):
 
         self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
 
-    def backmap(self, discrete_index: Union[int, npt.ArrayLike]) -> npt.ArrayLike:
+    def backmap(self, discrete_index: Union[int, ArrayLike]) -> ArrayLike:
+        """
+        Return the full-coordinate representation of a discrete state.
+
+        Parameters
+        ----------
+        discrete_index :
+            Discrete state index
+
+        Returns
+        -------
+        Array of coordinates
+        """
 
         return self._vectorized_backmapper(discrete_index)
 
-    def generate_trajectory(self, initial_states: npt.ArrayLike, n_steps: int) -> npt.ArrayLike:
+    def generate_trajectory(self, initial_states: ArrayLike, n_steps: int) -> ArrayLike:
+        """
+
+        Parameters
+        ----------
+        initial_states :
+            Array of initial discrete states to propagate trajectories from
+        n_steps :
+            Number of steps forward to propagate from each initial state. Total trajectory length will be n_steps
+
+        Returns
+        -------
+
+        """
 
         self.logger.debug(f"Propagating {initial_states} for {n_steps} steps...")
 
@@ -61,7 +100,16 @@ class MarkovGenerator(DiscreteGenerator):
         return trajectories
 
     @staticmethod
-    def validate_transition_matrix(transition_matrix: npt.ArrayLike):
+    def validate_transition_matrix(transition_matrix: ArrayLike):
+        """
+        Validate that a transition matrix is valid. Raises an :code:`AssertionError` if it is not.
+
+        Parameters
+        ----------
+        transition_matrix
+            A transition matrix
+
+        """
 
         assert transition_matrix.ndim == 2, "Transition matrix is not 2-dimensional"
 
@@ -69,7 +117,7 @@ class MarkovGenerator(DiscreteGenerator):
 
     def __setstate__(self, state):
         """
-        Make the transition matrix dense when unpickling
+        Makes the transition matrix dense when unpickling
         """
 
         if sparse.issparse(state['transition_matrix']):
@@ -82,7 +130,7 @@ class MarkovGenerator(DiscreteGenerator):
 
     def __getstate__(self):
         """
-        When pickling, make the transition matrix sparse
+        When pickling, makes the transition matrix sparse
         """
 
         sparse_dict = self.__dict__.copy()

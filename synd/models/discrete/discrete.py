@@ -4,6 +4,9 @@ import numpy.typing as npt
 
 
 class DiscreteGenerator(BaseSynDModel):
+    """
+    Abstract base class for discrete SynD models.
+    """
 
     def __init__(self):
 

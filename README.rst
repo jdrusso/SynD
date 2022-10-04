@@ -14,6 +14,8 @@ Library for creating and using synthetic dynamics generators.
 
 * Free software: MIT license
 
+* Documentation: https://jdrusso.github.io/SynD/index.html .
+
 
 Installation
 ------------

@@ -6,6 +6,8 @@ dependencies:
     - setuptools
     - rich
     - minio
+    - nbsphinx
+    - sphinx-autodoc-typehints
     - pip
     - pip:
         - .

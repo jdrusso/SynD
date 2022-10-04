@@ -6,19 +6,12 @@ Documentation
 .. autosummary::
    :nosignatures:
 
-   synd.core
    synd.models.base
    synd.models.discrete.discrete.DiscreteGenerator
    synd.models.discrete.markov.MarkovGenerator
    synd.westpa.propagator.SynMDPropagator
+   synd.core
    synd.hosted
-
-SynD Core (synd.core)
----------------------
-
-.. automodule:: synd.core
-   :members:
-   :inherited-members:
 
 
 SynD Models (synd.models)
@@ -41,6 +34,13 @@ WESTPA Propagator
 -----------------
 .. autoclass:: synd.westpa.propagator.SynMDPropagator
    :members:
+
+SynD Core (synd.core)
+---------------------
+
+.. automodule:: synd.core
+   :members:
+   :inherited-members:
 
 Model Hosting
 -------------

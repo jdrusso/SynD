@@ -11,6 +11,7 @@ Welcome to SynD's documentation!
    :caption: Contents:
 
    usage
+   examples
    api
 
 

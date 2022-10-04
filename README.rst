@@ -2,7 +2,10 @@
 SynD
 ====
 
-
+.. image:: https://mybinder.org/badge_logo.svg
+ :target: https://mybinder.org/v2/gh/jdrusso/SynD/HEAD?labpath=examples%2Fsynd_demo.ipynb
+ 
+ 
 Library for creating and using synthetic dynamics generators.
 
 

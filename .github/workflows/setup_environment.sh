@@ -13,4 +13,4 @@ conda env create -f environment.yml
 sudo apt-get update -y
 sudo apt-get install python3-sphinx -y
 
-pip install sphinx_rtd_theme
+pip install sphinx_rtd_theme nbsphinx sphinx-autodoc-typehints

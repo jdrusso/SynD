@@ -37,7 +37,6 @@ class SynDAugmentationDriver:
         """
 
         iter_group = self.data_manager.get_iter_group(self.sim_manager.n_iter)
-        n_iter = self.sim_manager.n_iter
         segments = self.data_manager.get_segments(
             n_iter=self.sim_manager.n_iter, load_pcoords=True
         )

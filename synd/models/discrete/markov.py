@@ -32,13 +32,16 @@ class MarkovGenerator(DiscreteGenerator):
 
         self.n_states = self.transition_matrix.shape[0]
         self._backmapper = backmapper
-        self._vectorized_backmapper = np.vectorize(backmapper)
 
         self.rng = np.random.default_rng(seed=seed)
 
         self.cumulative_probabilities = np.cumsum(self.transition_matrix, axis=1)
 
         self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
+
+    @property
+    def _vectorized_backmapper(self):
+        return np.vectorize(self._backmapper)
 
     def backmap(self, discrete_index: Union[int, ArrayLike]) -> ArrayLike:
         """

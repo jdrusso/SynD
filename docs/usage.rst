@@ -20,13 +20,29 @@ or, to install it into an existing conda environment:
     conda env update --name <your environment> --file environment.yml
 
 
-Model building and preparation
-------------------------------
+
+Model building and trajectory generation
+----------------------------------------
+
+.. literalinclude :: ../examples/generate_markov_trajectory.py
+   :language: python
 
 
-Trajectory generation
-----------------------
+Model building and saving
+-------------------------
+
+.. literalinclude :: ../examples/create_model.py
+   :language: python
+
+
+Using a saved model file
+------------------------
+
+.. literalinclude :: ../examples/use_saved_model.py
+   :language: python
 
 
 WESTPA Integration
 -------------------
+
+See the :code:`examples/westpa` directory for an example of WESTPA with a SynD propagator.

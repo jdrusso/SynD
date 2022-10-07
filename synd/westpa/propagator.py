@@ -3,6 +3,7 @@ import numpy as np
 import scipy.sparse as sparse
 import westpa
 import pickle
+from westpa.core.states import InitialState
 
 import synd.core
 from synd.models.discrete.markov import MarkovGenerator
@@ -37,8 +38,11 @@ def get_segment_parent_index(segment):
 
     sim_manager = westpa.rc.get_sim_manager()
 
-    # If the parent id is >= 0, then the parent was a segment, and we can get its index directly
-    if segment.parent_id >= 0:
+    # If the parent id is >= 0, then the parent was a segment, and we can get its index directly.
+    #   Otherwise, we have to get it from the ibstate auxdata
+    parent_was_ibstate = segment.parent_id >= 0
+
+    if not parent_was_ibstate:
 
         parent_map = sim_manager.we_driver._parent_map
         parent_state_index = parent_map[segment.parent_id].data["state_indices"][-1]
@@ -62,17 +66,18 @@ def get_segment_ibstate_discrete_index(segment):
     sim_manager = westpa.rc.get_sim_manager()
     data_manager = westpa.rc.get_data_manager()
 
-    n_bstates = len(sim_manager.current_iter_bstates)
-    parent_is_istate = segment.parent_id < -n_bstates
+    istate = data_manager.get_segment_initial_states([segment])[0]
 
-    if parent_is_istate:
-        istate = data_manager.get_segment_initial_states([segment])[0]
-        bstate_id = istate.basis_state_id
-
-    else:
+    if istate.istate_type is InitialState.ISTATE_TYPE_BASIS:
         bstate_id = -(segment.parent_id + 1)
+        parent_state_index = sim_manager.current_iter_bstates[bstate_id].auxref
 
-    parent_state_index = sim_manager.current_iter_bstates[bstate_id].auxref
+    elif istate.istate_type is InitialState.ISTATE_TYPE_GENERATED:
+        bstate_id = istate.basis_state_id
+        parent_state_index = sim_manager.current_iter_bstates[bstate_id].auxref
+
+    elif istate.istate_type is InitialState.ISTATE_TYPE_START:
+        parent_state_index = istate.basis_auxref
 
     return parent_state_index
 

@@ -1,6 +1,6 @@
 import westpa
 import pickle
-from .propagator import get_segment_parent_index
+from .propagator import get_segment_parent_index, get_segment_index
 
 
 class SynDAugmentationDriver:
@@ -46,7 +46,6 @@ class SynDAugmentationDriver:
 
         # Create auxdata/coord for the current iteration
         self.data_manager.we_h5file.create_dataset(
-            # f"{iter_path}/auxdata/coord",
             f"{iter_group.name}/auxdata/coord",
             shape=(n_walkers, 2, *feature_shape),
         )
@@ -57,19 +56,7 @@ class SynDAugmentationDriver:
 
         for i, segment in enumerate(segments):
 
-            # If this segment doesn't have a state index, it was just created, so get it from its bstate
-            if segment.parent_id < 0:
-
-                istate = self.data_manager.get_segment_initial_states([segment])[0]
-                bstate_id = istate.basis_state_id
-                segment_state_index = int(self.sim_manager.next_iter_bstates[bstate_id].auxref)
-
-            else:
-
-                segment_state_index = self.data_manager.we_h5file[
-                    f"{iter_group.name}/auxdata/state_indices"
-                ][segment.seg_id][-1]
-
+            segment_state_index = get_segment_index(segment)
             parent_state_index = get_segment_parent_index(segment)
 
             auxcoord_dataset[segment.seg_id, 0] = self.coord_map[parent_state_index]

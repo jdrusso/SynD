@@ -23,7 +23,8 @@ def get_segment_index(segment):
 
     else:
 
-        # TODO: Avoid reading directly from the H5 file
+        # TODO: Avoid reading directly from the H5 file, if possible. However, it's not guaranteed that this data
+        #   will exist anywhere else when this function is called.
         segment_state_index = data_manager.we_h5file[
             f"{iter_group.name}/auxdata/state_indices"
         ][segment.seg_id][-1]
@@ -40,7 +41,7 @@ def get_segment_parent_index(segment):
 
     # If the parent id is >= 0, then the parent was a segment, and we can get its index directly.
     #   Otherwise, we have to get it from the ibstate auxdata
-    parent_was_ibstate = segment.parent_id >= 0
+    parent_was_ibstate = segment.parent_id < 0
 
     if not parent_was_ibstate:
 

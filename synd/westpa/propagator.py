@@ -8,37 +8,71 @@ import synd.core
 from synd.models.discrete.markov import MarkovGenerator
 
 
+def get_segment_index(segment):
+
+    data_manager = westpa.rc.data_manager
+    sim_manager = westpa.rc.sim_manager
+
+    iter_group = data_manager.get_iter_group(sim_manager.n_iter)
+
+    # If this segment doesn't have a state index, it was just created, so get it from its bstate
+    if segment.parent_id < 0:
+
+        segment_state_index = get_segment_ibstate_discrete_index(segment)
+
+    else:
+
+        # TODO: Avoid reading directly from the H5 file
+        segment_state_index = data_manager.we_h5file[
+            f"{iter_group.name}/auxdata/state_indices"
+        ][segment.seg_id][-1]
+
+    return int(segment_state_index)
+
+
 def get_segment_parent_index(segment):
     """
     For a given segment, identify the discrete index of its parent
     """
 
     sim_manager = westpa.rc.get_sim_manager()
-    data_manager = westpa.rc.get_data_manager()
 
-    # If the parent id is >= 0, then the parent was a segment
+    # If the parent id is >= 0, then the parent was a segment, and we can get its index directly
     if segment.parent_id >= 0:
+
         parent_map = sim_manager.we_driver._parent_map
+        parent_state_index = parent_map[segment.parent_id].data["state_indices"][-1]
 
-        try:
-            parent_state_index = parent_map[segment.parent_id].data["state_indices"][-1]
-        except KeyError as e:
-            print(f"Parent map is currently {parent_map}")
-            print(
-                f"Parent map doesn't contain an entry for segment {segment} with parent ID {segment.parent_id}"
-            )
-            raise e
-
-        # TODO: Why does this happen..?
-        if type(parent_state_index) is np.ndarray:
-            parent_state_index = parent_state_index.item()
+        # # TODO: Why does this happen..? DOES this happen any more?
+        # if type(parent_state_index) is np.ndarray:
+        #     parent_state_index = parent_state_index.item()
 
     # Otherwise, that means the segment was a bstate/istate
     else:
-        parent_istate = data_manager.get_segment_initial_states([segment])[0]
 
-        parent_bstate_id = parent_istate.basis_state_id
-        parent_state_index = int(sim_manager.next_iter_bstates[parent_bstate_id].auxref)
+        parent_state_index = get_segment_ibstate_discrete_index(segment)
+
+    return int(parent_state_index)
+
+
+def get_segment_ibstate_discrete_index(segment):
+    """
+    Given an ibstate, returns the discrete index of the SynD state that generated it
+    """
+    sim_manager = westpa.rc.get_sim_manager()
+    data_manager = westpa.rc.get_data_manager()
+
+    n_bstates = len(sim_manager.current_iter_bstates)
+    parent_is_istate = segment.parent_id < -n_bstates
+
+    if parent_is_istate:
+        istate = data_manager.get_segment_initial_states([segment])[0]
+        bstate_id = istate.basis_state_id
+
+    else:
+        bstate_id = -(segment.parent_id + 1)
+
+    parent_state_index = sim_manager.current_iter_bstates[bstate_id].auxref
 
     return parent_state_index
 
@@ -163,15 +197,7 @@ class SynMDPropagator(WESTPropagator):
 
         for iseg, segment in enumerate(segments):
 
-            try:
-                initial_points[iseg] = segment.data["parent_final_state_index"]
-            except KeyError:
-                # If we're in the first iteration, no states have been written to auxdata yet, so we need to get this
-                #   state index directly from the bstate definition that it was generated from.
-                assert segment.parent_id < 0, "Parent is not a bstate, but also doesn't have state indices written for SynD"
-
-                bstate = westpa.rc.get_sim_manager().current_iter_bstates[segment.parent_id]
-                initial_points[iseg] = bstate.auxref
+            initial_points[iseg] = get_segment_parent_index(segment)
 
         new_trajectories = self.synd_model.generate_trajectory(
             initial_states=initial_points,

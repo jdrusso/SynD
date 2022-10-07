@@ -8,6 +8,13 @@ class SynDAugmentationDriver:
     WESTPA plugin to automatically handle coordinate augmentation.
 
     After each iteration, appends coordinates to iter_XXX/auxdata/coord, for later usage with haMSM construction.
+
+    Can be used by including the following entries in your west.cfg::
+
+        west:
+            plugins:
+            - plugin: synd.westpa.augmentation_driver.SynDAugmentationDriver
+                  coord_map: Pickled dictionary mapping discrete state indices to an array of coordinates
     """
 
     def __init__(self, sim_manager, plugin_config):

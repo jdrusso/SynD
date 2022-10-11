@@ -3,7 +3,7 @@ requires      = ["setuptools", "wheel"]
 
 [project]
 name = "SynD"
-version = "0.1.0"
+version = "0.1.2"
 description = "Synthetic dynamics for trajectory generation"
 readme = "README.md"
 authors = [{ name = "John Russo", email = "russojd@ohsu.edu" }]
@@ -18,7 +18,7 @@ dependencies = [
     "scipy",
     "rich"
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.7"
 
 [project.optional-dependencies]
 dev = ["black", "pytest"]

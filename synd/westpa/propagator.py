@@ -5,6 +5,7 @@ import westpa
 import pickle
 from westpa.core.states import InitialState
 import mdtraj as md
+from copy import deepcopy
 
 import synd.core
 from synd.models.discrete.markov import MarkovGenerator
@@ -185,7 +186,6 @@ class SynMDPropagator(WESTPropagator):
         self.coord_len = n_steps
         self.coord_dtype = int
 
-
     def get_pcoord(self, state):
         """Get the progress coordinate of the given basis or initial state."""
 
@@ -223,20 +223,25 @@ class SynMDPropagator(WESTPropagator):
             # For H5 plugin
             if westpa.rc.get_data_manager().store_h5:
 
-                # TODO: how to handle restart data
-                # segment.data['iterh5/restart'] = ...
+                # TODO: how to handle restart data?
+                #       I think we just don't for SynD, but let's silence that warning.
+                segment.data['iterh5/restart'] = None
 
                 full_coordinate_trajectory = np.array([
                     self.synd_model.backmap(x, 'full_coordinates')
                     for x in segment.data["state_indices"]
                 ])
 
-                self.topology.xyz = full_coordinate_trajectory
-                self.topology.time = np.arange(self.coord_len)
+                # To mimic the behavior of a saved MD trajectory, we omit the first point.
+                # I don't love this, but it's consistent with the OpenMM propagator.
+                # TODO: Change this -- it's inconsistent with how pcoords are saved, and isn't quite right
+                #   for the haMSM plugin.
+                self.topology.xyz = full_coordinate_trajectory[1:]
+                self.topology.time = np.arange(self.coord_len-1) + \
+                                     (self.coord_len-1) * westpa.rc.get_sim_manager().n_iter
 
-                segment.data['iterh5/trajectory'] = self.topology
-
-
+                # TODO: Avoid this copy! Probably super slow
+                segment.data['iterh5/trajectory'] = deepcopy(self.topology)
 
             segment.status = segment.SEG_STATUS_COMPLETE
 

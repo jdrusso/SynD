@@ -31,7 +31,7 @@ class MarkovGenerator(DiscreteGenerator):
         self.transition_matrix = transition_matrix
 
         self.n_states = self.transition_matrix.shape[0]
-        self._backmapper = backmapper
+        self._backmappers = {'default': backmapper}
 
         self.rng = np.random.default_rng(seed=seed)
 
@@ -39,11 +39,39 @@ class MarkovGenerator(DiscreteGenerator):
 
         self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
 
-    @property
-    def _vectorized_backmapper(self):
-        return np.vectorize(self._backmapper)
+    def add_backmapper(self, backmapper: Callable[[int], ArrayLike], name: str):
+        """
+        Define a new backmapper.
 
-    def backmap(self, discrete_index: Union[int, ArrayLike]) -> ArrayLike:
+        Parameters
+        ----------
+        backmapper :
+            A callable defining a new backmapper.
+        name :
+            The name to associate with the new backmapper.
+        """
+
+        if name in self._backmappers:
+            raise KeyError(f'A backmapper named {name} is already defined for this model.')
+
+        self._backmappers[name] = backmapper
+
+    def _vectorized_backmapper(self, mapper='default'):
+        backmapper = self._backmappers.get(mapper)
+
+        # TODO: This might be sketchy -- is 0 guaranteed to be mappable?
+        returned_shape = backmapper(0).shape
+        if len(returned_shape) == 1:
+            returned_shape = f"({returned_shape[0]})"
+
+        vectorized = np.vectorize(backmapper, signature=f"()->{returned_shape}")
+
+        return vectorized
+
+    def backmap(self,
+                discrete_index: Union[int, ArrayLike],
+                mapper: str = 'default'
+                ) -> ArrayLike:
         """
         Return the full-coordinate representation of a discrete state.
 
@@ -51,13 +79,16 @@ class MarkovGenerator(DiscreteGenerator):
         ----------
         discrete_index :
             Discrete state index
+        mapper :
+            Optional string to specify a backmapper for this model.
 
         Returns
         -------
         Array of coordinates
         """
 
-        return self._vectorized_backmapper(discrete_index)
+        backmap = self._vectorized_backmapper(mapper)
+        return backmap(discrete_index)
 
     def generate_trajectory(self, initial_states: ArrayLike, n_steps: int) -> ArrayLike:
         """
@@ -89,7 +120,6 @@ class MarkovGenerator(DiscreteGenerator):
         probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))
 
         for istep in range(1, n_steps):
-
             current_states = trajectories[:, istep - 1]
 
             next_states = np.argmin(

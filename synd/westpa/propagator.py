@@ -4,6 +4,7 @@ import scipy.sparse as sparse
 import westpa
 import pickle
 from westpa.core.states import InitialState
+import mdtraj as md
 
 import synd.core
 from synd.models.discrete.markov import MarkovGenerator
@@ -139,6 +140,7 @@ class SynMDPropagator(WESTPropagator):
         super(SynMDPropagator, self).__init__(rc)
 
         rc_parameters = rc.config.get(['west', 'propagation', 'parameters'])
+        self.topology = md.load(rc_parameters['topology'])
 
         if 'synd_model' in rc_parameters.keys():
             model_path = rc_parameters['synd_model']
@@ -183,6 +185,7 @@ class SynMDPropagator(WESTPropagator):
         self.coord_len = n_steps
         self.coord_dtype = int
 
+
     def get_pcoord(self, state):
         """Get the progress coordinate of the given basis or initial state."""
 
@@ -216,6 +219,24 @@ class SynMDPropagator(WESTPropagator):
             segment.pcoord = np.array([
                 self.synd_model.backmap(x) for x in segment.data["state_indices"]
             ]).reshape(self.coord_len, -1)
+
+            # For H5 plugin
+            if westpa.rc.get_data_manager().store_h5:
+
+                # TODO: how to handle restart data
+                # segment.data['iterh5/restart'] = ...
+
+                full_coordinate_trajectory = np.array([
+                    self.synd_model.backmap(x, 'full_coordinates')
+                    for x in segment.data["state_indices"]
+                ])
+
+                self.topology.xyz = full_coordinate_trajectory
+                self.topology.time = np.arange(self.coord_len)
+
+                segment.data['iterh5/trajectory'] = self.topology
+
+
 
             segment.status = segment.SEG_STATUS_COMPLETE
 

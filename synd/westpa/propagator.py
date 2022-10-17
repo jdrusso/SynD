@@ -71,12 +71,13 @@ def get_segment_ibstate_discrete_index(segment):
 
     istate = data_manager.get_segment_initial_states([segment])[0]
 
-    westpa.rc.pstatus(istate.istate_type)
-
-    # It's possible the parent ib state of this segment is an H5-defined state.
-    # If that's the case, then we need to look up the discrete index for that state.
     if istate.istate_type is InitialState.ISTATE_TYPE_BASIS:
-        bstate_id = -(segment.parent_id + 1)
+
+        # Without gen_istate=True, there *is* no istate corresponding to the -(basis state ID + 1).
+        #   Instead, we have to get the basis state that this istate *is* (remember, with gen_istate=False initial
+        #   states are mapped directly to basis states)
+        # bstate_id = -(segment.parent_id + 1)
+        bstate_id = istate.basis_state_id
         parent_state_index = sim_manager.current_iter_bstates[bstate_id].auxref
 
     elif istate.istate_type is InitialState.ISTATE_TYPE_GENERATED:
@@ -89,6 +90,8 @@ def get_segment_ibstate_discrete_index(segment):
     else:
         raise Exception(f"Couldn't get parent state for istate {istate}")
 
+    # It's possible the parent ib state of this segment is an H5-defined state.
+    # If that's the case, then we need to look up the discrete index for that state.
     if type(parent_state_index) is not int and 'hdf:' in parent_state_index:
         # Make a dummy bstate, so we can get cached values
         dummy_bstate = BasisState(label='_', probability=0, auxref=parent_state_index)
@@ -208,10 +211,11 @@ class SynMDPropagator(WESTPropagator):
         state_index = int(state.auxref)
         state.pcoord = self.synd_model.backmap(state_index)
 
-    def gen_istate(self, basis_state, initial_state):
-
-        basis_state_index = int(basis_state.auxref)
-        initial_state.pcoord = self.synd_model.backmap(basis_state_index)
+    # def gen_istate(self, basis_state, initial_state):
+    #
+    #     basis_state_index = int(basis_state.auxref)
+    #     initial_state.pcoord = basis_state.pcoord
+    #     # initial_state.pcoord = self.synd_model.backmap(basis_state_index)
 
     def propagate(self, segments):
 

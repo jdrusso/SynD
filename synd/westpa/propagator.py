@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as sparse
 import westpa
 import pickle
-from westpa.core.states import InitialState
+from westpa.core.states import InitialState, BasisState
 import mdtraj as md
 from copy import deepcopy
 
@@ -71,6 +71,10 @@ def get_segment_ibstate_discrete_index(segment):
 
     istate = data_manager.get_segment_initial_states([segment])[0]
 
+    westpa.rc.pstatus(istate.istate_type)
+
+    # It's possible the parent ib state of this segment is an H5-defined state.
+    # If that's the case, then we need to look up the discrete index for that state.
     if istate.istate_type is InitialState.ISTATE_TYPE_BASIS:
         bstate_id = -(segment.parent_id + 1)
         parent_state_index = sim_manager.current_iter_bstates[bstate_id].auxref
@@ -81,6 +85,18 @@ def get_segment_ibstate_discrete_index(segment):
 
     elif istate.istate_type is InitialState.ISTATE_TYPE_START:
         parent_state_index = istate.basis_auxref
+
+    else:
+        raise Exception(f"Couldn't get parent state for istate {istate}")
+
+    if type(parent_state_index) is not int and 'hdf:' in parent_state_index:
+        # Make a dummy bstate, so we can get cached values
+        dummy_bstate = BasisState(label='_', probability=0, auxref=parent_state_index)
+        cached_state, (_, _, seg_id) = dummy_bstate.get_h5_cached_segment_value(
+            key='auxdata/state_indices'
+        )
+
+        parent_state_index = cached_state
 
     return parent_state_index
 

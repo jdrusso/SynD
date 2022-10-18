@@ -52,9 +52,10 @@ class SynDAugmentationDriver:
         n_walkers = len(segments)
 
         # Create auxdata/coord for the current iteration
-        self.data_manager.we_h5file.create_dataset(
+        self.data_manager.we_h5file.require_dataset(
             f"{iter_group.name}/auxdata/coord",
             shape=(n_walkers, 2, *feature_shape),
+            dtype=self.coord_map[0].dtype
         )
 
         self.data_manager.flush_backing()

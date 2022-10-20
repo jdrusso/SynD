@@ -67,14 +67,11 @@ def get_segment_parent_index(segment):
             }
             }
             data_manager.dataset_options.update(new_options)
-            westpa.rc.pstatus(data_manager.dataset_options)
 
-            westpa.rc.pstatus(f"Parent id is {segment.parent_id}")
+            # This is documented as having a load_auxdata parameter... but it doesn't.
             actual_parent_segment = data_manager.get_segments(parent_segment.n_iter,
                                                               seg_ids=[parent_segment.seg_id])[0]
             data_manager.dataset_options = og_dataset_options
-
-            westpa.rc.pstatus(actual_parent_segment.data)
 
             parent_state_index = actual_parent_segment.data["state_indices"][-1]
 

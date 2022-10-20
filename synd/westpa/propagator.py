@@ -40,6 +40,7 @@ def get_segment_parent_index(segment):
     """
 
     sim_manager = westpa.rc.get_sim_manager()
+    data_manager = westpa.rc.get_data_manager()
 
     # If the parent id is >= 0, then the parent was a segment, and we can get its index directly.
     #   Otherwise, we have to get it from the ibstate auxdata
@@ -48,11 +49,34 @@ def get_segment_parent_index(segment):
     if not parent_was_ibstate:
 
         parent_map = sim_manager.we_driver._parent_map
-        parent_state_index = parent_map[segment.parent_id].data["state_indices"][-1]
+        parent_segment = parent_map[segment.parent_id]
 
-        # # TODO: Why does this happen..? DOES this happen any more?
-        # if type(parent_state_index) is np.ndarray:
-        #     parent_state_index = parent_state_index.item()
+        try:
+            parent_state_index = parent_segment.data["state_indices"][-1]
+
+        # Sometimes, if we're resuming from an interrupted iteration or something, the parent segment we obtain
+        #   from the parent_map might not have .data populated on it.
+        except KeyError:
+
+            og_dataset_options = data_manager.dataset_options.copy()
+
+            new_options = {'auxdata_state_indices': {
+                    'load': True,
+                    'name': 'state_indices',
+                    'h5path': 'auxdata/state_indices'
+            }
+            }
+            data_manager.dataset_options.update(new_options)
+            westpa.rc.pstatus(data_manager.dataset_options)
+
+            westpa.rc.pstatus(f"Parent id is {segment.parent_id}")
+            actual_parent_segment = data_manager.get_segments(parent_segment.n_iter,
+                                                              seg_ids=[parent_segment.seg_id])[0]
+            data_manager.dataset_options = og_dataset_options
+
+            westpa.rc.pstatus(actual_parent_segment.data)
+
+            parent_state_index = actual_parent_segment.data["state_indices"][-1]
 
     # Otherwise, that means the segment was a bstate/istate
     else:

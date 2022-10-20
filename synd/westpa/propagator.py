@@ -48,8 +48,16 @@ def get_segment_parent_index(segment):
 
     if not parent_was_ibstate:
 
-        parent_map = sim_manager.we_driver._parent_map
-        parent_segment = parent_map[segment.parent_id]
+        if hasattr(sim_manager.we_driver, '_parent_map'):
+            parent_map = sim_manager.we_driver._parent_map
+            parent_segment = parent_map[segment.parent_id]
+        else:
+            # If we're continuing a stopped run, _parent_map may not be populated.
+            # In that case, how do we get the parent segment?
+
+            # I think in that case, though, we've already augmented the segment.. so we're fine to just do nothing
+            raise AttributeError
+
 
         try:
             parent_state_index = parent_segment.data["state_indices"][-1]

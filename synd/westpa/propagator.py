@@ -36,8 +36,19 @@ def get_segment_index(segment):
 
 def get_segment_parent_index(segment):
     """
-    For a given segment, identify the discrete index of its parent
+    For a given segment, identify the discrete index of its parent.
+
+    For parents that are plain segments, get it from the auxdata.
+
+    For parents that are initial/basis states, get it from the state definition's auxref.
     """
+
+    # Note that this is invoked at the beginning of propagation, to obtain initial positions for each segment,
+    #   and also in augmentation.
+    # At the beginning of propagation, nothing's been written to the H5 file yet, so we can't use westpa.analysis
+    #   to obtain the parent.
+    # In augmentation, it's fine in theory to just look in the H5 file (i.e. with westpa.analysis), but it comes
+    #   at a massive performance hit.
 
     sim_manager = westpa.rc.get_sim_manager()
     data_manager = westpa.rc.get_data_manager()

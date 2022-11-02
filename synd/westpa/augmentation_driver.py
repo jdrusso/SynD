@@ -65,13 +65,7 @@ class SynDAugmentationDriver:
         for i, segment in enumerate(segments):
 
             segment_state_index = get_segment_index(segment)
-
-            try:
-                parent_state_index = get_segment_parent_index(segment)
-            except AttributeError as e:
-                # This should only trigger when restarting -- instead of doing this, we could just check
-                #   to see if this iteration has already been augmented for this segment.
-                continue
+            parent_state_index = get_segment_parent_index(segment)
 
             auxcoord_dataset[segment.seg_id, 0] = self.coord_map[parent_state_index]
             auxcoord_dataset[segment.seg_id, 1] = self.coord_map[segment_state_index]

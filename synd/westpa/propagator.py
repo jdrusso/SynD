@@ -14,22 +14,18 @@ from synd.models.discrete.markov import MarkovGenerator
 def get_segment_index(segment):
 
     data_manager = westpa.rc.data_manager
-    sim_manager = westpa.rc.sim_manager
 
-    iter_group = data_manager.get_iter_group(sim_manager.n_iter)
-
-    # If this segment doesn't have a state index, it was just created, so get it from its bstate
+    # If this segment was just created, it doesn't have a state index, so get it from its bstate
     if segment.parent_id < 0:
 
         segment_state_index = get_segment_ibstate_discrete_index(segment)
 
     else:
 
-        # TODO: Avoid reading directly from the H5 file, if possible. However, it's not guaranteed that this data
-        #   will exist anywhere else when this function is called.
-        segment_state_index = data_manager.we_h5file[
-            f"{iter_group.name}/auxdata/state_indices"
-        ][segment.seg_id][-1]
+        # TODO: Would be nice to avoid explicitly reading the H5 file
+        iter_group = data_manager.get_iter_group(segment.n_iter)
+        auxdata = iter_group['auxdata/state_indices']
+        segment_state_index = auxdata[segment.seg_id][-1]
 
     return int(segment_state_index)
 
@@ -50,7 +46,6 @@ def get_segment_parent_index(segment):
     # In augmentation, it's fine in theory to just look in the H5 file (i.e. with westpa.analysis), but it comes
     #   at a massive performance hit.
 
-    sim_manager = westpa.rc.get_sim_manager()
     data_manager = westpa.rc.get_data_manager()
 
     # If the parent id is >= 0, then the parent was a segment, and we can get its index directly.
@@ -59,44 +54,18 @@ def get_segment_parent_index(segment):
 
     if not parent_was_ibstate:
 
-        if hasattr(sim_manager.we_driver, '_parent_map'):
-            parent_map = sim_manager.we_driver._parent_map
-            parent_segment = parent_map[segment.parent_id]
+        if 'parent_final_state_index' in segment.data:
+            parent_state_index = segment.data['parent_final_state_index']
+            return parent_state_index
+
         else:
-            # If we're continuing a stopped run, _parent_map may not be populated.
-            # In that case, how do we get the parent segment?
-
-            # I think in that case, though, we've already augmented the segment.. so we're fine to just do nothing
-            raise AttributeError
-
-
-        try:
-            parent_state_index = parent_segment.data["state_indices"][-1]
-
-        # Sometimes, if we're resuming from an interrupted iteration or something, the parent segment we obtain
-        #   from the parent_map might not have .data populated on it.
-        except KeyError:
-
-            og_dataset_options = data_manager.dataset_options.copy()
-
-            new_options = {'auxdata_state_indices': {
-                    'load': True,
-                    'name': 'state_indices',
-                    'h5path': 'auxdata/state_indices'
-            }
-            }
-            data_manager.dataset_options.update(new_options)
-
-            # This is documented as having a load_auxdata parameter... but it doesn't.
-            actual_parent_segment = data_manager.get_segments(parent_segment.n_iter,
-                                                              seg_ids=[parent_segment.seg_id])[0]
-            data_manager.dataset_options = og_dataset_options
-
-            parent_state_index = actual_parent_segment.data["state_indices"][-1]
+            prev_segments = data_manager.get_segments(
+                n_iter=segment.n_iter - 1, load_pcoords=True
+            )
+            parent_state_index = get_segment_index(prev_segments[segment.parent_id])
 
     # Otherwise, that means the segment was a bstate/istate
     else:
-
         parent_state_index = get_segment_ibstate_discrete_index(segment)
 
     return int(parent_state_index)
@@ -154,11 +123,14 @@ def copy_segment_data():
     That means, the "parent" segments here are the segments that just finished running, or the segments associated
      with cur_iter_* properties.
     In other words, this means that cur_iter_istates are NOT the istates for `next_iter_segments`!
+
+    This runs during finalize_iteration.
     """
 
     sim_manager = westpa.rc.get_sim_manager()
 
     for segment in sim_manager.we_driver.next_iter_segments:
+
         segment.data["parent_final_state_index"] = get_segment_parent_index(
             segment
         )
@@ -251,11 +223,6 @@ class SynMDPropagator(WESTPropagator):
         state_index = int(state.auxref)
         state.pcoord = self.synd_model.backmap(state_index)
 
-    # def gen_istate(self, basis_state, initial_state):
-    #
-    #     basis_state_index = int(basis_state.auxref)
-    #     initial_state.pcoord = basis_state.pcoord
-    #     # initial_state.pcoord = self.synd_model.backmap(basis_state_index)
 
     def propagate(self, segments):
 

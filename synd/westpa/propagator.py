@@ -60,9 +60,9 @@ def get_segment_parent_index(segment):
 
         else:
             prev_segments = data_manager.get_segments(
-                n_iter=segment.n_iter - 1, load_pcoords=True
+                n_iter=segment.n_iter - 1, seg_ids=[segment.parent_id], load_pcoords=False
             )
-            parent_state_index = get_segment_index(prev_segments[segment.parent_id])
+            parent_state_index = get_segment_index(prev_segments[0])
 
     # Otherwise, that means the segment was a bstate/istate
     else:

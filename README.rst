@@ -8,6 +8,9 @@ SynD
 
 .. image:: https://github.com/jdrusso/synd/actions/workflows/build_docs.yml/badge.svg
   :target: https://github.com/jdrusso/synd/actions/workflows/build_docs.yml
+
+.. image:: https://zenodo.org/badge/537717764.svg
+   :target: https://zenodo.org/badge/latestdoi/537717764
  
 Library for creating and using synthetic dynamics generators.
 

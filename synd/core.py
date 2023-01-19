@@ -1,22 +1,18 @@
 """Functions for interacting with SynD models."""
-import pickle
+from synd.models.base import BaseSynDModel
 
 
 def load_model(filename: str):
-    """
-    Load a SynD model from a file.
+    """Load a SynD model from a file.
 
     Parameters
     ----------
-    filename
-        Path to SynD model file
+    filename : str
+        Path to SynD model file.
 
     Returns
     -------
-        SynD model
+    BaseSynDModel
+
     """
-
-    with open(filename, 'rb') as infile:
-        model = pickle.load(infile)
-
-    return model
+    return BaseSynDModel.load(filename)

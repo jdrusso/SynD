@@ -104,17 +104,16 @@ class MarkovGenerator(DiscreteGenerator):
         -------
 
         """
-
         self.logger.debug(f"Propagating {initial_states} for {n_steps} steps...")
+
         initial_states = np.atleast_1d(initial_states)
+        n_trajectories = initial_states.shape[0]
+
         trajectories = np.full(
-            shape=(initial_states.shape[0], n_steps),
+            shape=(n_trajectories, n_steps),
             dtype=int,
             fill_value=-1
         )
-
-        n_trajectories = initial_states.shape[0]
-
         trajectories[:, 0] = initial_states
 
         probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))

@@ -1,6 +1,6 @@
 """Store/retrieve SynD models from an S3 host."""
 import minio
-from synd.models.base import BaseSynDModel
+from synd.models.base import SynDModel
 from io import BytesIO
 
 MODEL_HOST = "minios.jdrusso.dev"
@@ -12,7 +12,7 @@ def make_minio_client(access_key: str, secret_key: str, model_host: str = MODEL_
     return client
 
 
-def download_model(identifier: str, client: minio.Minio, bucket: str = MODEL_BUCKET) -> BaseSynDModel:
+def download_model(identifier: str, client: minio.Minio, bucket: str = MODEL_BUCKET) -> SynDModel:
 
     model = client.get_object(bucket, identifier)
 

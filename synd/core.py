@@ -1,5 +1,5 @@
 """Functions for interacting with SynD models."""
-from synd.models.base import BaseSynDModel
+from synd.models.base import SynDModel
 
 
 def load_model(filename: str):
@@ -15,4 +15,4 @@ def load_model(filename: str):
     BaseSynDModel
 
     """
-    return BaseSynDModel.load(filename)
+    return SynDModel.load(filename)

@@ -1,176 +1,107 @@
 from __future__ import annotations  # Sets PEP563, necessary for autodoc type aliases
-from synd.models.discrete.discrete import DiscreteGenerator
+
 import numpy as np
-from numpy.typing import ArrayLike
-from typing import Callable, Union
+
+from collections.abc import Iterable, Iterator
+from numpy.typing import ArrayLike, NDArray
 from scipy import sparse
+from synd.models.base import SynDModel
+from typing import Any, Callable, Optional, Set, Union
 
 
-class MarkovGenerator(DiscreteGenerator):
+class MarkovGenerator(SynDModel):
+    """A SynD model governed by a Markov chain.
+
+    Parameters
+    ----------
+    transition_matrix : ArrayLike | sparse.csr_matrix
+        A row stochastic matrix specifying the interstate transition
+        probabilities.
+    default_backmapper : Callable[[NDArray[int]], Any]
+        A function that maps a discrete state trajectory (consisting of
+        zero-based state indices) to a full-coordinate representation.
+    seed : int, optional
+        Seed for the random number generator.
+
     """
-    Generator using discrete Markov dynamics.
-    """
-
-    def __init__(self, transition_matrix: ArrayLike, backmapper: Callable[[int], ArrayLike], seed: int = None):
-        """
-        Parameters
-        ----------
-        transition_matrix
-            A valid discrete transition matrix
-        backmapper
-            Callable mapping a discrete state index to a full-coordinate representation
-        seed
-            The seed for random number generator
-        """
-
-        super().__init__()
-
-        if sparse.issparse(transition_matrix):
-            transition_matrix = transition_matrix.toarray()
-
-        self.transition_matrix = transition_matrix
-
-        self.n_states = self.transition_matrix.shape[0]
-        self._backmappers = {'default': backmapper}
-
+    def __init__(
+            self,
+            transition_matrix: Union[ArrayLike, sparse.spmatrix],
+            default_backmapper: Callable[[NDArray[int]], Any],
+            seed: Optional[int] = None,
+    ):
+        super().__init__(default_backmapper)
+        self.transition_matrix = _ensure_transition_matrix(transition_matrix)
         self.rng = np.random.default_rng(seed=seed)
+        self._preprocess_transition_matrix()
+        self.logger.info(f'Created Markov generator with {self.n_states} states.')
 
-        self.cumulative_probabilities = np.cumsum(self.transition_matrix, axis=1)
+    def _preprocess_transition_matrix(self):
+        matrix = self.transition_matrix
+        self.accessible_states = [row.indices for row in matrix]
+        self.cumulative_probabilities = [np.cumsum(row.data) for row in matrix]
 
-        self.logger.info(f"Discrete Markov model created with {self.n_states} states successfully created")
+    @property
+    def n_states(self) -> int:
+        """int: Number of states of the underlying Markov chain."""
+        return self.transition_matrix.shape[0]
 
-    def add_backmapper(self, backmapper: Callable[[int], ArrayLike], name: str):
-        """
-        Define a new backmapper.
-
-        Parameters
-        ----------
-        backmapper :
-            A callable defining a new backmapper.
-        name :
-            The name to associate with the new backmapper.
-        """
-
-        if name in self._backmappers:
-            raise KeyError(f'A backmapper named {name} is already defined for this model.')
-
-        self._backmappers[name] = backmapper
-
-    def _vectorized_backmapper(self, mapper='default'):
-        backmapper = self._backmappers.get(mapper)
-
-        # TODO: This might be sketchy -- is 0 guaranteed to be mappable?
-        returned_shape = backmapper(0).shape
-        if len(returned_shape) == 1:
-            returned_shape = f"({returned_shape[0]})"
-
-        vectorized = np.vectorize(backmapper, signature=f"()->{returned_shape}")
-
-        return vectorized
-
-    def backmap(self,
-                discrete_index: Union[int, ArrayLike],
-                mapper: str = 'default'
-                ) -> ArrayLike:
-        """
-        Return the full-coordinate representation of a discrete state.
+    def generate_unmapped_trajectories(
+            self,
+            length: int,
+            initial_states: Iterable[int],
+            target: Optional[Set[int]] = None,
+    ) -> Iterator[NDArray[int]]:
+        """Generate trajectories of the underlying Markov chain.
 
         Parameters
         ----------
-        discrete_index :
-            Discrete state index
-        mapper :
-            Optional string to specify a backmapper for this model.
+        length : int
+        initial_states : Iterable[int]
+        target : Set[int], optional
 
         Returns
         -------
-        Array of coordinates
-        """
-
-        backmap = self._vectorized_backmapper(mapper)
-        return backmap(discrete_index)
-
-    def generate_trajectory(self, initial_states: ArrayLike, n_steps: int) -> ArrayLike:
-        """
-
-        Parameters
-        ----------
-        initial_states :
-            Array of initial discrete states to propagate trajectories from
-        n_steps :
-            Number of steps forward to propagate from each initial state. Total trajectory length will be n_steps
-
-        Returns
-        -------
+        Iterator[NDArray[int]]
 
         """
-        self.logger.debug(f"Propagating {initial_states} for {n_steps} steps...")
+        for initial_state in initial_states:
+            yield self._generate_unmapped_trajectory(length, initial_state, target)
 
-        initial_states = np.atleast_1d(initial_states)
-        n_trajectories = initial_states.shape[0]
-
-        trajectories = np.full(
-            shape=(n_trajectories, n_steps),
-            dtype=int,
-            fill_value=-1
-        )
-        trajectories[:, 0] = initial_states
-
-        probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))
-
-        for istep in range(1, n_steps):
-            current_states = trajectories[:, istep - 1]
-
-            next_states = np.argmin(
-                self.cumulative_probabilities[current_states].T
-                < probabilities[:, istep - 1],
-                axis=0,
-            )
-
-            trajectories[:, istep] = next_states
-
-        return trajectories
-
-    @staticmethod
-    def validate_transition_matrix(transition_matrix: ArrayLike):
-        """
-        Validate that a transition matrix is valid. Raises an :code:`AssertionError` if it is not.
-
-        Parameters
-        ----------
-        transition_matrix
-            A transition matrix
-
-        """
-
-        assert transition_matrix.ndim == 2, "Transition matrix is not 2-dimensional"
-
-        assert np.isclose(transition_matrix.sum(axis=1), 1.0), "Transition matrix is not row-normalized"
-
-    def __setstate__(self, state):
-        """
-        Makes the transition matrix dense when unpickling
-        """
-
-        if sparse.issparse(state['transition_matrix']):
-            state['transition_matrix'] = state['transition_matrix'].toarray()
-
-        # Recalculate the cumulative probabilities
-        state['cumulative_probabilities'] = np.cumsum(state['transition_matrix'], axis=1)
-
-        self.__dict__ = state
+    def _generate_unmapped_trajectory(
+            self,
+            length: int,
+            initial_state: int,
+            target: Optional[Set[int]],
+    ) -> NDArray[int]:
+        traj = np.full(length, -1)
+        traj[0] = initial_state
+        random = self.rng.random(length - 1)
+        for n in range(length - 1):
+            start = traj[n]
+            index = np.searchsorted(self.cumulative_probabilities[start], random[n])
+            traj[n + 1] = self.accessible_states[start][index]
+            if target is not None and traj[n + 1] in target:
+                return traj[:n + 2]
+        return traj
 
     def __getstate__(self):
-        """
-        When pickling, makes the transition matrix sparse
-        """
+        state = self.__dict__.copy()
+        # Delete attributes that can be recomputed from the transition matrix:
+        state.pop('accessible_states')
+        state.pop('cumulative_probabilities')
+        return state
 
-        sparse_dict = self.__dict__.copy()
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._preprocess_transition_matrix()
 
-        # Store a sparse representation of this
-        sparse_dict['transition_matrix'] = sparse.csr_matrix(self.__dict__['transition_matrix'])
 
-        # Don't pickle this, because 1) it can be calculated and 2) it's large and not sparse
-        sparse_dict.pop('cumulative_probabilities')
-
-        return sparse_dict
+def _ensure_transition_matrix(matrix):
+    if not isinstance(matrix, sparse.csr_matrix):
+        matrix = sparse.csr_matrix(matrix)
+    if matrix.shape[1] != matrix.shape[0]:
+        raise ValueError('transition matrix must be a square matrix')
+    if not np.allclose([row.sum() for row in matrix], 1.0):
+        raise ValueError('transition matrix must be row-normalized')
+    return matrix

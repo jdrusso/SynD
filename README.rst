@@ -6,8 +6,9 @@ SynD
  :target: https://mybinder.org/v2/gh/jdrusso/SynD/HEAD?labpath=examples%2Fsynd_demo.ipynb
  
 
-.. image:: https://github.com/jdrusso/synd/actions/workflows/build_docs.yml/badge.svg
-  :target: https://github.com/jdrusso/synd/actions/workflows/build_docs.yml
+.. image:: https://readthedocs.org/projects/synd/badge/?version=latest
+    :target: https://synd.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 .. image:: https://zenodo.org/badge/537717764.svg
    :target: https://zenodo.org/badge/latestdoi/537717764

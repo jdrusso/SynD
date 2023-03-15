@@ -57,6 +57,7 @@ def get_segment_parent_index(segment):
 
         if 'parent_final_state_index' in segment.data:
             parent_state_index = segment.data['parent_final_state_index']
+            data_manager.close_backing()
             return parent_state_index
 
         else:
@@ -68,6 +69,8 @@ def get_segment_parent_index(segment):
     # Otherwise, that means the segment was a bstate/istate
     else:
         parent_state_index = get_segment_ibstate_discrete_index(segment)
+
+    data_manager.close_backing()
 
     return int(parent_state_index)
 

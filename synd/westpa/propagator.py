@@ -47,6 +47,7 @@ def get_segment_parent_index(segment):
     #   at a massive performance hit.
 
     data_manager = westpa.rc.get_data_manager()
+    data_manager.open_backing('r')
 
     # If the parent id is >= 0, then the parent was a segment, and we can get its index directly.
     #   Otherwise, we have to get it from the ibstate auxdata

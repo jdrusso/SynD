@@ -174,14 +174,20 @@ class SynMDPropagator(WESTPropagator):
         rc_parameters = rc.config.get(['west', 'propagation', 'parameters'])
         self.topology = md.load(rc_parameters['topology'])
 
-        if 'synd_model' in rc_parameters.keys():
+	# Determine seed and whether to randomize RNG
+        rng_seed = rc.config.get(['west', 'propagation', 'parameters', 'rng_seed'], None)
+        randomize = rc.config.get(['west', 'propagation', 'parameters', 'randomize'], True)
+
+        if 'synd_model' in rc_paramters.keys():
             model_path = rc_parameters['synd_model']
             self.synd_model = synd.core.load_model(model_path)
+            if randomize:
+                self.synd_model.rng = np.random.default_rng(seed=rng_seed)  # Replacing the pickled RNG with new generator
         else:
             pcoord_map_path = rc_parameters['pcoord_map']
             with open(pcoord_map_path, 'rb') as inf:
                 pcoord_map = pickle.load(inf)
-            if type(pcoord_map) is dict:
+            if isinstance(pcoord_map, dict):
                 backmapper = pcoord_map.get
             else:
                 backmapper = pcoord_map
@@ -196,7 +202,7 @@ class SynMDPropagator(WESTPropagator):
             self.synd_model = MarkovGenerator(
                 transition_matrix=self.transition_matrix,
                 backmapper=backmapper,
-                seed=None
+                seed=rng_seed
             )
 
         # Our dynamics are propagated in the discrete space, which is recorded only in auxdata. After completing an

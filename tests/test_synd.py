@@ -69,9 +69,11 @@ class TestSynd(unittest.TestCase):
 
         self.synmd_model.save("simple_synmd_model.dat")
 
-        loaded_model = load_model("simple_synmd_model.dat")
+        loaded_model = load_model("simple_synmd_model.dat", randomize=True)
 
         assert isinstance(loaded_model, MarkovGenerator)
+
+        assert loaded_model.rng.random() != self.synmd_model.rng.random()
 
         os.remove("simple_synmd_model.dat")
 

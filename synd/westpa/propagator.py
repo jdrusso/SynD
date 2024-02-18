@@ -176,13 +176,11 @@ class SynMDPropagator(WESTPropagator):
 
 	# Determine seed and whether to randomize RNG
         rng_seed = rc.config.get(['west', 'propagation', 'parameters', 'rng_seed'], None)
-        randomize = rc.config.get(['west', 'propagation', 'parameters', 'randomize'], True)
+        randomize = rc.config.get(['west', 'propagation', 'parameters', 'randomize'], True)  # Default to randomize RNG
 
         if 'synd_model' in rc_paramters.keys():
             model_path = rc_parameters['synd_model']
-            self.synd_model = synd.core.load_model(model_path)
-            if randomize:
-                self.synd_model.rng = np.random.default_rng(seed=rng_seed)  # Replacing the pickled RNG with new generator
+            self.synd_model = synd.core.load_model(model_path, randomize)
         else:
             pcoord_map_path = rc_parameters['pcoord_map']
             with open(pcoord_map_path, 'rb') as inf:

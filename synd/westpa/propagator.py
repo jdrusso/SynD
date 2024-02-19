@@ -175,12 +175,12 @@ class SynMDPropagator(WESTPropagator):
         self.topology = md.load(rc_parameters['topology'])
 
 	# Determine seed and whether to randomize RNG
-        rng_seed = rc.config.get(['west', 'propagation', 'parameters', 'rng_seed'], None)
-        randomize = rc.config.get(['west', 'propagation', 'parameters', 'randomize'], True)  # Default to randomize RNG
+        self.rng_seed = rc.config.get(['west', 'propagation', 'parameters', 'rng_seed'], None)
+        self.randomize = rc.config.get(['west', 'propagation', 'parameters', 'randomize'], True)  # Default to randomize RNG
 
-        if 'synd_model' in rc_paramters.keys():
+        if 'synd_model' in rc_parameters.keys():
             model_path = rc_parameters['synd_model']
-            self.synd_model = synd.core.load_model(model_path, randomize)
+            self.synd_model = synd.core.load_model(model_path, self.randomize)
         else:
             pcoord_map_path = rc_parameters['pcoord_map']
             with open(pcoord_map_path, 'rb') as inf:
@@ -200,7 +200,7 @@ class SynMDPropagator(WESTPropagator):
             self.synd_model = MarkovGenerator(
                 transition_matrix=self.transition_matrix,
                 backmapper=backmapper,
-                seed=rng_seed
+                seed=self.rng_seed
             )
 
         # Our dynamics are propagated in the discrete space, which is recorded only in auxdata. After completing an
@@ -236,8 +236,10 @@ class SynMDPropagator(WESTPropagator):
         initial_points = np.empty(n_segs, dtype=self.coord_dtype)
 
         for iseg, segment in enumerate(segments):
-
             initial_points[iseg] = get_segment_parent_index(segment)
+
+        if self.randomize:  # Randomize RNG everytime you propagate
+            self.synd_model.rng = np.random.default_rng(seed=self.rng_seed)
 
         new_trajectories = self.synd_model.generate_trajectory(
             initial_states=initial_points,

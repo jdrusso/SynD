@@ -117,7 +117,7 @@ class MarkovGenerator(DiscreteGenerator):
 
         trajectories[:, 0] = initial_states
 
-        probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))
+        probabilities = np.asarray([generator.random(n_steps -1) for generator in self.rng.spawn(n_trajectories)])
 
         for istep in range(1, n_steps):
             current_states = trajectories[:, istep - 1]

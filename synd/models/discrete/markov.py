@@ -122,7 +122,7 @@ class MarkovGenerator(DiscreteGenerator):
         if self.numpy_version_greater:
             probabilities = np.asarray([generator.random(n_steps -1) for generator in self.rng.spawn(n_trajectories)])
         else:
-             probabilities = np.asarray([np.random.default_rng().random(n_steps -1) for i in range(n_trajectories)])
+             probabilities = np.asarray([np.random.default_rng(seed=seed).random(n_steps -1) for seed in self.rng.bit_generator._seed_seq.spawn(n_trajectories)])
 
         for istep in range(1, n_steps):
             current_states = trajectories[:, istep - 1]

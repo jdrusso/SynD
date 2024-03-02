@@ -3,6 +3,10 @@ from abc import ABC
 import logging
 from rich.logging import RichHandler
 import pickle
+try:
+    from packaging.version import parse
+except ModuleNotFoundError:
+    from pkg_resources import parse_version as parse
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,7 @@ class BaseSynDModel(ABC):
     def __init__(self):
 
         self.logger = logger
+        self.numpy_version_greater = parse(numpy.__version__) >= parse('1.25.0')
 
     def serialize(self):
         """

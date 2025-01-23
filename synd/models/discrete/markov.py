@@ -5,6 +5,11 @@ from numpy.typing import ArrayLike
 from typing import Callable, Union
 from scipy import sparse
 
+try:
+    from packaging.version import parse
+except ModuleNotFoundError:
+    from pkg_resources import parse_version as parse
+
 
 class MarkovGenerator(DiscreteGenerator):
     """
@@ -34,6 +39,8 @@ class MarkovGenerator(DiscreteGenerator):
         self._backmappers = {'default': backmapper}
 
         self.rng = np.random.default_rng(seed=seed)
+
+        self.numpy_version_greater = parse(np.__version__) >= parse('1.25.0')
 
         self.cumulative_probabilities = np.cumsum(self.transition_matrix, axis=1)
 
@@ -117,7 +124,10 @@ class MarkovGenerator(DiscreteGenerator):
 
         trajectories[:, 0] = initial_states
 
-        probabilities = self.rng.random(size=(n_trajectories, n_steps - 1))
+        if self.numpy_version_greater:
+            probabilities = np.asarray([generator.random(n_steps -1) for generator in self.rng.spawn(n_trajectories)])
+        else:
+             probabilities = np.asarray([np.random.default_rng(seed=seed).random(n_steps -1) for seed in self.rng.bit_generator._seed_seq.spawn(n_trajectories)])
 
         for istep in range(1, n_steps):
             current_states = trajectories[:, istep - 1]

@@ -1,6 +1,5 @@
 import westpa
 import pickle
-from .propagator import get_segment_parent_index, get_segment_index
 
 
 class SynDAugmentationDriver:
@@ -62,10 +61,14 @@ class SynDAugmentationDriver:
 
         auxcoord_dataset = self.data_manager.we_h5file[f"{iter_group.name}/auxdata/coord"]
 
+        # Each segment's discrete trajectory starts at its parent's final state and ends at its own, so read both ends
+        #   from what was actually propagated, in one read for the whole iteration.
+        state_indices = iter_group['auxdata/state_indices'][...]
+
         for i, segment in enumerate(segments):
 
-            segment_state_index = get_segment_index(segment)
-            parent_state_index = get_segment_parent_index(segment)
+            parent_state_index = int(state_indices[segment.seg_id][0])
+            segment_state_index = int(state_indices[segment.seg_id][-1])
 
             auxcoord_dataset[segment.seg_id, 0] = self.coord_map[parent_state_index]
             auxcoord_dataset[segment.seg_id, 1] = self.coord_map[segment_state_index]

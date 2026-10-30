@@ -48,21 +48,23 @@ def get_segment_parent_index(segment):
 
     data_manager = westpa.rc.get_data_manager()
 
+    # On the master, copy_segment_data and fill_parent_state_indices store the parent's index on every segment
+    #   before it's propagated, for both kinds of parent. Workers have no H5 file or ibstates, so this is the only
+    #   path that works there.
+    if 'parent_final_state_index' in segment.data:
+        parent_state_index = segment.data['parent_final_state_index']
+        return parent_state_index
+
     # If the parent id is >= 0, then the parent was a segment, and we can get its index directly.
     #   Otherwise, we have to get it from the ibstate auxdata
     parent_was_ibstate = segment.parent_id < 0
 
     if not parent_was_ibstate:
 
-        if 'parent_final_state_index' in segment.data:
-            parent_state_index = segment.data['parent_final_state_index']
-            return parent_state_index
-
-        else:
-            prev_segments = data_manager.get_segments(
-                n_iter=segment.n_iter - 1, seg_ids=[segment.parent_id], load_pcoords=False
-            )
-            parent_state_index = get_segment_index(prev_segments[0])
+        prev_segments = data_manager.get_segments(
+            n_iter=segment.n_iter - 1, seg_ids=[segment.parent_id], load_pcoords=False
+        )
+        parent_state_index = get_segment_index(prev_segments[0])
 
     # Otherwise, that means the segment was a bstate/istate
     else:
@@ -111,6 +113,28 @@ def get_segment_ibstate_discrete_index(segment):
         parent_state_index = cached_state
 
     return parent_state_index
+
+
+def fill_parent_state_indices():
+    """
+    Store the parent's discrete state index on any segment about to be propagated that doesn't have it yet, so the
+    propagator never has to look it up itself. Workers (e.g. with the ZMQ work manager) have no H5 file or ibstates.
+
+    copy_segment_data covers every segment after the first iteration of a w_run, so this only does work for segments
+    loaded from the H5 file: the first iteration of a simulation, and the first iteration after a restart.
+
+    This runs during pre_propagation, on the master.
+    """
+
+    sim_manager = westpa.rc.get_sim_manager()
+
+    missing = [
+        segment for segment in sim_manager.incomplete_segments.values()
+        if 'parent_final_state_index' not in segment.data
+    ]
+
+    for segment in missing:
+        segment.data['parent_final_state_index'] = get_segment_parent_index(segment)
 
 
 def copy_segment_data():
@@ -206,6 +230,10 @@ class SynMDPropagator(WESTPropagator):
         sim_manager = rc.get_sim_manager()
         sim_manager.register_callback(
             sim_manager.finalize_iteration, copy_segment_data, 1
+        )
+        # Segments loaded from the H5 file (first iteration, restarts) don't have that yet, so fill it in on the master
+        sim_manager.register_callback(
+            sim_manager.pre_propagation, fill_parent_state_indices, 1
         )
 
         # TODO: Would be nice to decouple this from pcoord len, so you can run dynamics at a higher resolution

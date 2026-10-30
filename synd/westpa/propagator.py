@@ -15,8 +15,10 @@ def get_segment_index(segment):
 
     data_manager = westpa.rc.data_manager
 
-    # If this segment was just created, it doesn't have a state index, so get it from its bstate
-    if segment.parent_id < 0:
+    # If this segment was just created, it doesn't have a state index, so get it from its bstate.
+    #   A segment that started from an ibstate keeps parent_id < 0 after it's been propagated, so check its status:
+    #   once it's complete, its final state is in its own auxdata like any other segment's.
+    if segment.parent_id < 0 and segment.status != segment.SEG_STATUS_COMPLETE:
 
         segment_state_index = get_segment_ibstate_discrete_index(segment)
 

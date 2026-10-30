@@ -129,11 +129,22 @@ def copy_segment_data():
 
     sim_manager = westpa.rc.get_sim_manager()
 
+    # Those parents are still in sim_manager.segments with their state indices, so read the final state from there
+    #   instead of from the H5 file. Parents that are ibstates, or that aren't in memory with their data (e.g. ones
+    #   that completed before a restart), go through get_segment_parent_index.
+    cur_iter_segments = sim_manager.segments
+
     for segment in sim_manager.we_driver.next_iter_segments:
 
-        segment.data["parent_final_state_index"] = get_segment_parent_index(
-            segment
-        )
+        parent = cur_iter_segments.get(segment.parent_id) if segment.parent_id >= 0 else None
+
+        if parent is not None and "state_indices" in parent.data:
+            segment.data["parent_final_state_index"] = int(parent.data["state_indices"][-1])
+
+        else:
+            segment.data["parent_final_state_index"] = get_segment_parent_index(
+                segment
+            )
 
 
 class SynMDPropagator(WESTPropagator):
